@@ -9,12 +9,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-^9h#ekcpo@k2g3affh9^8q2+mgigp_o4hmrhq=_v6k4^g7tow#'
 DEBUG = True
 
+
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
-    "adjoining-adrienne-stellately.ngrok-free.dev",
-    "testserver",   # ← Required for Django test client
+    "winningpostuk.onrender.com",
+    "winningpostuk.com",
+    "www.winningpostuk.com",
 ]
+
 
 
 # Application definition
