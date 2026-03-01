@@ -21,24 +21,23 @@ from tips.utils_notifications import send_daily_tip_notifications
 
 @admin.action(description="Notify all paid subscribers that today's tips are ready")
 def admin_notify_tips_ready(modeladmin, request, queryset):
-    """
-    Sends a 'tips are ready' notification (no tip content) to all paid/active subscribers.
-    Uses batched BCC sends for privacy and throughput and reports a summary.
-    """
-    result = send_daily_tip_notifications(request=request, personalized=False)
-    recipients = result.get("recipients", 0)
-    batches = result.get("batches", 0)
 
-    if recipients > 0:
+    try:
+        result = send_daily_tip_notifications(
+            batch_size=50,                 # BCC size
+            sleep_between_batches=1.5,     # throttle
+            max_recipients=None,           # or set for safety during testing
+            request=request,
+        )
         messages.success(
             request,
-            f"Notification sent to {recipients} subscriber(s) in {batches} batch(es)."
+            f"Notifications sent to {result['recipients']} subscriber(s) "
+            f"in {result['batches']} batch(es)."
+            + (f" Skipped: {result['skipped']}." if result.get("skipped") else "")
         )
-    else:
-        messages.warning(
-            request,
-            "No active subscribers found or email settings are not configured."
-        )
+    except Exception as e:
+        # Never let the admin action crash the request
+        messages.error(request, f"Error sending notifications: {e}")
 
 
 @admin.action(description="Auto-settle selected tips")
@@ -149,11 +148,9 @@ class TipAdmin(admin.ModelAdmin):
         "horse_name",
         "category",
         "odds",
-        "confidence_stars",
         "result",
         "profit",
         "active",
-        "created_at",
     )
 
     list_filter = (
@@ -168,6 +165,8 @@ class TipAdmin(admin.ModelAdmin):
     search_fields = ("horse_name", "racecourse")
     ordering = ("race_date",)
 
+    list_per_page = 25   # ⭐ THIS IS WHERE IT GOES ⭐
+    
     readonly_fields = ("created_at", "profit_preview", "badge_preview")
 
     fieldsets = (
