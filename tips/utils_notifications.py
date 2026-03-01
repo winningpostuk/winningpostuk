@@ -113,8 +113,9 @@ def _chunked(iterable: Iterable[str], size: int) -> Iterable[List[str]]:
         yield batch
 
 
+
 def send_daily_tip_notifications(
-    *,
+    *args,  # <-- accept any positional args (ignored for backward-compat)
     batch_size: int = 50,
     sleep_between_batches: float = 1.5,
     max_recipients: Optional[int] = None,
@@ -122,27 +123,23 @@ def send_daily_tip_notifications(
 ) -> Dict[str, int]:
     """
     Render-safe batched notification sender that avoids timeouts and OOM.
-
-    - Renders HTML once (no per-user personalization).
-    - Batches recipients (BCC) to reduce SMTP calls and memory.
-    - Reuses SMTP connection and retries once on disconnect.
-    - Returns summary dict for admin messages.
-
-    Args:
-        batch_size: number of recipients per email (BCC). Keep <= 50 for Gmail.
-        sleep_between_batches: seconds to sleep between SMTP sends (throttle).
-        max_recipients: if set, stops after sending to this many recipients (safety).
-        request: optional HttpRequest for absolute logo URL.
-
-    Returns:
-        {"recipients": int, "batches": int, "skipped": int}
+    Any positional args are ignored for backward-compat with older admin actions.
     """
+
+    # Backward-compat: if someone passed a queryset or anything positionally, ignore it
+    if args:
+        try:
+            logger.warning("send_daily_tip_notifications received unexpected positional args: %s (ignored)", args)
+        except Exception:
+            pass
+
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)
     subject = "Today's Tips Are Ready"
 
     view_url = getattr(settings, "TIPS_TODAY_URL", None)
     login_url = getattr(settings, "LOGIN_URL_ABSOLUTE", None)
     manage_url = getattr(settings, "ACCOUNT_MANAGE_URL", None)
+
 
     # Render templates once
     html = _render_notification_html(view_url, login_url, manage_url, request=request)
