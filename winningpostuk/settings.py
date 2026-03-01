@@ -45,18 +45,13 @@ INSTALLED_APPS = [
 # -----------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',    # <-- REQUIRED FOR STATIC FILES
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-
-    # NEW — Block normal users from admin
     'members.middleware.no_admin_for_users.BlockNormalUsersFromAdmin',
-
-    # ⭐ NEW — Subscription Enforcement Middleware
     'members.middleware.subscription.SubscriptionRequiredMiddleware',
-
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
