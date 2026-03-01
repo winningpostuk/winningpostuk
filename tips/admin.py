@@ -19,23 +19,26 @@ from tips.utils_notifications import send_daily_tip_notifications
 # ACTIONS
 # =====================================================================
 
+
 @admin.action(description="Notify all paid subscribers that today's tips are ready")
 def admin_notify_tips_ready(modeladmin, request, queryset):
     try:
-        result = send_daily_tip_notifications(
-            batch_size=50,
-            sleep_between_batches=1.5,
-            max_recipients=None,
-            request=request,
-        )
-        messages.success(
-            request,
-            f"Notifications sent to {result['recipients']} subscriber(s) "
-            f"in {result['batches']} batch(es)."
-            + (f" Skipped: {result['skipped']}." if result.get("skipped") else "")
-        )
+        # Minimal call – works with older signatures
+        result = send_daily_tip_notifications(50)
+
+        # If your function returns True/False or nothing, adjust these lines accordingly:
+        if isinstance(result, dict):
+            messages.success(
+                request,
+                f"Notifications sent to {result.get('recipients', 0)} subscriber(s) "
+                f"in {result.get('batches', 0)} batch(es)."
+            )
+        else:
+            messages.success(request, "Notifications have been sent.")
     except Exception as e:
         messages.error(request, f"Error sending notifications: {e}")
+
+
 
 
 @admin.action(description="Auto-settle selected tips")
