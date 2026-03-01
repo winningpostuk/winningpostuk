@@ -375,3 +375,42 @@ div.text-center a.filter-link:visited {
     color: gold !important;
 }
 
+
+/* MEMBERSHIP LEVEL BOX COLOURS */
+
+/* Bronze tier */
+.membership-box.bronze {
+    background-color: #cd7f32 !important;
+    color: #000 !important;
+    border: 2px solid #b36b2c !important;
+}
+
+/* Silver tier */
+.membership-box.silver {
+    background-color: #c0c0c0 !important;
+    color: #000 !important;
+    border: 2px solid #a9a9a9 !important;
+}
+
+/* Gold tier */
+.membership-box.gold {
+    background-color: #d4af37 !important;
+    color: #000 !important;
+    border: 2px solid #c19b2d !important;
+}
+
+/* Platinum tier */
+.membership-box.platinum {
+    background-color: #e5e4e2 !important;
+    color: #000 !important;
+    border: 2px solid #cfcfcf !important;
+}
+
+/* Hover effect */
+.membership-box:hover {
+    opacity: 0.9;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+    transform: translateY(-3px);
+}
+
