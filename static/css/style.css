@@ -375,42 +375,72 @@ div.text-center a.filter-link:visited {
     color: gold !important;
 }
 
+/* ----------------------------------------------------
+   FIX MEMBERSHIP LINK STYLES (override <a> defaults)
+----------------------------------------------------- */
 
-/* MEMBERSHIP LEVEL BOX COLOURS */
+.membership-box {
+    display: block !important;
+    text-decoration: none !important;
+    color: inherit !important;
+}
 
-/* Bronze tier */
+/* Remove default link color in all states */
+.membership-box:link,
+.membership-box:visited,
+.membership-box:hover,
+.membership-box:active {
+    text-decoration: none !important;
+    color: inherit !important;
+}
+
+/* ----------------------------------------------------
+   MEMBERSHIP COLOUR BOX FIX
+----------------------------------------------------- */
+
+/* Bronze */
 .membership-box.bronze {
     background-color: #cd7f32 !important;
     color: #000 !important;
     border: 2px solid #b36b2c !important;
+    padding: 20px;
+    border-radius: 8px;
 }
 
-/* Silver tier */
+/* Silver */
 .membership-box.silver {
     background-color: #c0c0c0 !important;
     color: #000 !important;
     border: 2px solid #a9a9a9 !important;
+    padding: 20px;
+    border-radius: 8px;
 }
 
-/* Gold tier */
+/* Gold */
 .membership-box.gold {
     background-color: #d4af37 !important;
     color: #000 !important;
     border: 2px solid #c19b2d !important;
+    padding: 20px;
+    border-radius: 8px;
 }
 
-/* Platinum tier */
+/* Platinum */
 .membership-box.platinum {
     background-color: #e5e4e2 !important;
     color: #000 !important;
     border: 2px solid #cfcfcf !important;
+    padding: 20px;
+    border-radius: 8px;
 }
 
 /* Hover effect */
 .membership-box:hover {
     opacity: 0.9;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
     transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
+
+
 
