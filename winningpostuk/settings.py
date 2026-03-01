@@ -118,7 +118,12 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# ✅ Django 4.2+/6.0 static storage (recommended way)
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
 
 # -------------------------
 # 💳 PayPal Settings
@@ -150,21 +155,36 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'wpostuk@gmail.com'
 EMAIL_HOST_PASSWORD = 'djvh vrlz sdat aeaj'  # NEVER your real Gmail password
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = "WinningPostUK <wpostuk@gmail.com>"
+EMAIL_TIMEOUT = 15  # ✅ so sockets don't hang and kill the worker
 
-# -------------------------
-# 📩 Email CTA URLs
-# -------------------------
 
-# Link used in the daily tips notification email
-TIPS_TODAY_URL = "https://localhost:8000/dashboard/"
+# 📩 Email CTA URLs (used by the notification sender)
+SITE_BASE_URL = "https://winningpostuk.com"  # used to build absolute logo URL in emails
+TIPS_TODAY_URL = "https://winningpostuk.com/dashboard/"   # your tips are on the dashboard
+LOGIN_URL_ABSOLUTE = "https://winningpostuk.com/login/"
+ACCOUNT_MANAGE_URL = "https://winningpostuk.com/membership/"
 
-# Absolute login URL (Django LOGIN_URL is only a path)
-LOGIN_URL_ABSOLUTE = "https://localhost:8000/login/"
-
-# Membership page
-ACCOUNT_MANAGE_URL = "https://localhost:8000/membership/"
 
 RECAPTCHA_PUBLIC_KEY = "6LfjRHIsAAAAADkgfyXszaF1_Y569L1OycQKcyST"
 RECAPTCHA_PRIVATE_KEY = "6LfjRHIsAAAAAK0PBrh7vXcJ_9Q3nUK2qUTw7H1_"
 SILENCED_SYSTEM_CHECKS = ["captcha.recaptcha_test_key_error"]
+
+
+# ✅ Behind Render/Cloudflare, trust the proxy for HTTPS detection
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Recommended production flags (enable once everything is confirmed working over HTTPS)
+CSRF_TRUSTED_ORIGINS = [
+    "https://winningpostuk.com",
+    "https://www.winningpostuk.com",
+    "https://*.onrender.com",
+]
+
+# Optional hardening once domain is fully live and login works over HTTPS:
+# SECURE_SSL_REDIRECT = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_HSTS_SECONDS = 3600
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+# SECURE_HSTS_PRELOAD = True
