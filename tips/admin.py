@@ -21,12 +21,15 @@ from tips.utils_notifications import send_daily_tip_notifications
 
 @admin.action(description="Notify all paid subscribers that today's tips are ready")
 def admin_notify_tips_ready(modeladmin, request, queryset):
-
+    """
+    Render-safe notification sender: batched BCC, throttled, exception-handled
+    so the admin page always returns a response.
+    """
     try:
         result = send_daily_tip_notifications(
             batch_size=50,                 # BCC size
-            sleep_between_batches=1.5,     # throttle
-            max_recipients=None,           # or set for safety during testing
+            sleep_between_batches=1.5,     # throttle between batches
+            max_recipients=None,           # set an int for test limiting (e.g., 50)
             request=request,
         )
         messages.success(
@@ -36,15 +39,14 @@ def admin_notify_tips_ready(modeladmin, request, queryset):
             + (f" Skipped: {result['skipped']}." if result.get("skipped") else "")
         )
     except Exception as e:
-        # Never let the admin action crash the request
         messages.error(request, f"Error sending notifications: {e}")
 
 
 @admin.action(description="Auto-settle selected tips")
 def admin_auto_settle(modeladmin, request, queryset):
     """
-    For each selected tip, if the race time has passed and it's not settled, mark as LOST (if no result)
-    and set settled=True. Does not change tips in the future or already settled.
+    For each selected tip, if the race time has passed and it's not settled,
+    mark as LOST (if no result) and set settled=True. Does not change future or already settled tips.
     """
     now = timezone.localtime()
     today = now.date()
@@ -55,27 +57,26 @@ def admin_auto_settle(modeladmin, request, queryset):
         if tip.settled:
             continue
 
-        # Build a datetime for the tip's scheduled datetime if possible
+        # Build a datetime for the tip's scheduled date+time when possible
+        tip_dt = None
         try:
             tip_dt = datetime.combine(tip.race_date, tip.race_time)
             if timezone.is_naive(tip_dt):
                 tip_dt = timezone.make_aware(tip_dt, timezone.get_current_timezone())
         except Exception:
-            # Fall back to crude comparison if fields are strings or malformed
             tip_dt = None
 
         should_settle = False
-        if tip_dt:
+        if tip_dt is not None:
             should_settle = tip_dt <= now
         else:
-            # Fallback path – rely on date+time individually
+            # Fallback comparison
             if tip.race_date < today:
                 should_settle = True
             elif tip.race_date == today and tip.race_time <= time_now:
                 should_settle = True
 
         if should_settle:
-            # Default un-set result to LOST
             tip.result = tip.result or "LOST"
             tip.settled = True
             tip.save(update_fields=["result", "settled"])
@@ -88,12 +89,12 @@ def admin_auto_settle(modeladmin, request, queryset):
 def admin_recalc_profit(modeladmin, request, queryset):
     """
     Saves each selected tip that is already settled to trigger any model-level
-    recalculation you’ve implemented (signals or overridden save()).
+    recalculation (signals or overridden save()).
     """
     updated = 0
     for tip in queryset:
         if tip.settled:
-            tip.save()  # triggers any internal profit recalculation
+            tip.save()  # triggers internal profit recalculation if implemented
             updated += 1
     modeladmin.message_user(request, f"Profit recalculated for {updated} settled tip(s).")
 
@@ -101,8 +102,8 @@ def admin_recalc_profit(modeladmin, request, queryset):
 @admin.action(description="Sync badges for selected tips")
 def admin_sync_badges(modeladmin, request, queryset):
     """
-    Attempts to map racecourse name to a badge filename based on files in static/images/courses.
-    Uses a lowercase hyphenated filename convention: 'Ascot' -> 'ascot.png'
+    Map racecourse -> badge filename based on files in static/images/courses.
+    Uses lowercase hyphenated filename convention: 'Ascot' -> 'ascot.png'
     """
     badges_path = os.path.join(settings.BASE_DIR, "static", "images", "courses")
     if not os.path.isdir(badges_path):
@@ -129,28 +130,26 @@ def admin_sync_badges(modeladmin, request, queryset):
 
 
 # =====================================================================
-# MAIN TIP ADMIN — CLEANED + MERGED
+# MAIN TIP ADMIN — OPTIMISED FOR RENDER
 # =====================================================================
 
 @admin.register(Tip)
 class TipAdmin(admin.ModelAdmin):
     actions = [
-        admin_notify_tips_ready,   # <-- notification action
+        admin_notify_tips_ready,
         admin_auto_settle,
         admin_recalc_profit,
         admin_sync_badges,
     ]
 
+    # Keep this list light to avoid OOM on free-tier containers
     list_display = (
         "racecourse",
         "race_date",
         "race_time",
         "horse_name",
         "category",
-        "odds",
         "result",
-        "profit",
-        "active",
     )
 
     list_filter = (
@@ -165,8 +164,10 @@ class TipAdmin(admin.ModelAdmin):
     search_fields = ("horse_name", "racecourse")
     ordering = ("race_date",)
 
-    list_per_page = 25   # ⭐ THIS IS WHERE IT GOES ⭐
-    
+    # ⭐ Critical memory saver on Render free tier
+    list_per_page = 25
+
+    # These are only used on the object form page (not on the list page)
     readonly_fields = ("created_at", "profit_preview", "badge_preview")
 
     fieldsets = (
@@ -209,12 +210,12 @@ class TipAdmin(admin.ModelAdmin):
     }
 
     # ----------------------------------------
-    # CUSTOM DISPLAY METHODS
+    # CUSTOM DISPLAY METHODS (detail page)
     # ----------------------------------------
 
     def confidence_stars(self, obj):
         """
-        Render confidence as a 5-star bar.
+        Render confidence as 0–5 star string (not used in list_display here).
         """
         try:
             val = int(obj.confidence or 0)
@@ -238,11 +239,10 @@ class TipAdmin(admin.ModelAdmin):
 
     def badge_preview(self, obj):
         """
-        Show the mapped racecourse badge if present.
+        Show the mapped racecourse badge if present (only on detail form).
         """
         if obj.badge:
             url = static(f"images/courses/{obj.badge}")
-            # Note: In Django admin, return a small image preview
             return format_html('<img src="{}" style="height:60px;" />', url)
         return "No badge"
     badge_preview.short_description = "Badge Preview"
