@@ -1,0 +1,179 @@
+<!-- DEBUG VERSION: DASHBOARD TEMPLATE LOADED -->
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<!-- HEADER -->
+<div class="text-center mb-4">
+    <h2 class="dashboard-title">Members Area</h2>
+    <p class="dashboard-subtitle">Exclusive horse racing insights and full performance analytics.</p>
+</div>
+
+<!-- MEMBERSHIP STATUS -->
+<div class="membership-box">
+    <h4 class="text-gold">Welcome back, {{ user.username }}!</h4>
+    <p class="text-light mb-0">Your subscription is active.</p>
+</div>
+
+<!-- PERFORMANCE TITLE -->
+<div class="text-center mb-5 mt-5">
+    <h2 class="text-gold">Winning Post UK Performance Dashboard</h2>
+    <p class="text-light">Analysing results, strike rates and profit.</p>
+</div>
+
+<!-- FILTER BUTTONS -->
+<div class="text-center mb-4">
+    <a href="?range=7" class="filter-link {% if range_filter == '7' %}filter-active{% endif %}">Last 7 Days</a>
+    <a href="?range=30" class="filter-link {% if range_filter == '30' %}filter-active{% endif %}">Last 30 Days</a>
+    <a href="?range=ytd" class="filter-link {% if range_filter == 'ytd' %}filter-active{% endif %}">Year to Date</a>
+    <a href="?range=all" class="filter-link {% if range_filter == 'all' %}filter-active{% endif %}">All Time</a>
+</div>
+
+<!-- STRIKE RATE KPI + CHART -->
+<div class="row align-items-center mt-4">
+    <div class="col-md-4 text-center">
+        <h3 class="text-gold">{{ strike_rate }}%</h3>
+        <p class="text-light">Strike Rate</p>
+    </div>
+    <div class="col-md-8">
+        <canvas id="strikeRateChart" height="200"></canvas>
+    </div>
+</div>
+
+<hr class="gold-line">
+
+<!-- ROI + TOTAL PROFIT + PROFIT CHART -->
+<div class="row align-items-center mt-4">
+    <div class="col-md-4 text-center">
+        <h3 class="text-gold">{{ roi }}%</h3>
+        <p class="text-light">ROI</p>
+
+        <h3 class="text-gold mt-3">{{ total_profit }}</h3>
+        <p class="text-light">Total Profit (Points)</p>
+    </div>
+
+    <div class="col-md-8">
+        <canvas id="profitChart" height="200"></canvas>
+    </div>
+</div>
+
+<hr class="gold-line">
+
+
+<!-- CATEGORY PERFORMANCE -->
+<h3 class="text-gold mt-4">Category Performance</h3>
+
+<table class="custom-table mt-3" style="width: 50%; margin: 0 auto;">
+    <thead>
+        <tr class="text-gold">
+            <th>Category</th>
+            <th>Wins</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cat, wins in category_stats.items %}
+        <tr>
+            <td>{{ cat }}</td>
+            <td>{{ wins }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<hr class="gold-line">
+
+
+<!-- COURSE PERFORMANCE -->
+<h3 class="text-gold mt-4">Course Performance</h3>
+
+<table class="custom-table mt-3" style="width: 70%; margin: 0 auto;">
+    <thead>
+        <tr class="text-gold">
+            <th>Racecourse</th>
+            <th>Wins</th>
+            <th>Placed</th>
+            <th>Total Profit</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in course_performance %}
+        <tr>
+            <td>{{ row.racecourse }}</td>
+            <td>{{ row.wins }}</td>
+            <td>{{ row.placed }}</td>
+            <td>
+                {% if row.total_profit >= 0 %}
+                    <span style="color:#00ff7f;">+{{ row.total_profit|floatformat:2 }}</span>
+                {% else %}
+                    <span style="color:#ff4444;">{{ row.total_profit|floatformat:2 }}</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="text-light">No course data available for this period.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<hr class="gold-line">
+
+<!-- CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+new Chart(document.getElementById("strikeRateChart"), {
+    type: 'line',
+    data: {
+        labels: {{ strike_rate_labels|safe }},
+
+datasets: [{
+    label: 'Strike Rate %',
+    data: {{ strike_rate_values|safe }},
+    borderColor: 'gold',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    borderWidth: 2,
+    pointRadius: 0,          // REMOVE CIRCLE POINTS
+    pointHitRadius: 10,      // still clickable for tooltip
+    tension: 0.25
+
+        }]
+    },
+    options: {
+        scales: {
+            y: { suggestedMin: 0, suggestedMax: 100, ticks: { color: 'white' }},
+            x: { ticks: { color: 'white' }}
+        }
+    }
+});
+
+new Chart(document.getElementById("profitChart"), {
+    type: 'line',
+    data: {
+        labels: {{ graph_labels|safe }},
+
+datasets: [{
+    label: 'Daily Profit',
+    data: {{ graph_profit|safe }},
+    borderColor: 'gold',
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderWidth: 2,
+    pointRadius: 0,          // REMOVE POINTS
+    pointHitRadius: 10,
+    tension: 0.25
+
+        }]
+    },
+    options: {
+        scales: {
+            y: { ticks: { color: 'white' }},
+            x: { ticks: { color: 'white' }}
+        }
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,37 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5" style="max-width: 500px;">
+    <h2 class="premium-title mb-4">Login</h2>
+    <form method="post" class="text-start">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <!-- Remember Me Checkbox -->
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="remember_me" id="rememberMe">
+            <label class="form-check-label text-light" for="rememberMe">
+                Remember Me
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3 w-100">Login</button>
+    </form>
+
+    <!-- Links -->
+
+<p class="mt-3 text-light">
+    Don't have an account? 
+    <a href="{% url 'register' %}" class="text-warning">Register here</a>
+</p>
+<p class="mt-2 text-light">
+    Forgot your password? 
+    <a href="{% url 'password_reset' %}" class="text-warning">Reset it here</a>
+</p>
+
+{% if user.is_staff %}
+    <a href="/admin/">Admin Panel</a>
+{% endif %}
+
+</div>
+{% endblock %}

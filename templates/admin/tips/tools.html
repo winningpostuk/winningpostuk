@@ -1,0 +1,33 @@
+
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content %}
+<h1>Tipster Tools</h1>
+
+<div class="module">
+    <h2>Maintenance Tools</h2>
+
+    <div class="button-row">
+        <a class="button" href="auto-settle/">Auto-Settle All Overdue Tips</a>
+        <a class="button" href="sync-badges/">Sync Racecourse Badges</a>
+        <a class="button" href="export-profit/">Export Monthly Profit CSV</a>
+    </div>
+</div>
+
+<style>
+.button-row .button {
+    display: inline-block;
+    margin: 10px 10px 0 0;
+    padding: 10px 20px;
+    background: #444;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+.button:hover {
+    background: #111;
+}
+</style>
+
+{% endblock %}

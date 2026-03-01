@@ -1,0 +1,92 @@
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="text-center mb-4">
+    <h2 class="text-gold">Today’s Tips — {{ today }}</h2>
+    <p class="text-light">Expert selections for today’s races.</p>
+</div>
+
+{% if tips %}
+<div class="row g-4">
+
+    {% for tip in tips %}
+    <div class="col-12 col-md-6 col-lg-4">
+
+        <div class="tip-card" style="
+            background:#121212;
+            border:1px solid #1f1f1f;
+            border-radius:12px;
+            padding:20px;
+            color:white;
+            height:100%;
+        ">
+
+            <!-- HEADER -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                <!-- Course badge + name -->
+                <div class="d-flex align-items-center" style="gap:10px;">
+{% if tip.badge_path %}
+    <img src="{% static tip.badge_path %}" 
+         alt="{{ tip.racecourse }} badge"
+         class="course-badge"
+         style="width:75px;height:75px;border-radius:6px;object-fit:contain;">
+{% endif %}
+                    <strong>{{ tip.racecourse }}</strong>
+                </div>
+
+                <!-- CATEGORY BADGE WITH CORRECT COLOURS -->
+                <span class="badge category-{{ tip.category|lower }}">
+                    {{ tip.category }}
+                </span>
+            </div>
+
+            <!-- HORSE NAME -->
+            <h4 class="mb-1" style="color:#FFD700;">{{ tip.horse_name }}</h4>
+
+            <!-- TIME + ODDS -->
+            <p class="text-light mb-3" style="opacity:0.85;">
+                {{ tip.race_time|time:"H:i" }}
+                • Odds:
+                <strong class="odds">{{ tip.odds }}</strong>
+            </p>
+
+            <!-- PROS / CONS -->
+            {% if tip.pros %}
+            <p class="text-light mb-1"><strong>Pros:</strong> {{ tip.pros }}</p>
+            {% endif %}
+
+            {% if tip.cons %}
+            <p class="text-light mb-2"><strong>Cons:</strong> {{ tip.cons }}</p>
+            {% endif %}
+
+            <!-- GOLD CONFIDENCE STARS -->
+            {% if tip.confidence %}
+            <p class="small" style="color:#FFD700;">
+                Confidence:
+                {% for i in "12345" %}
+                    {% if forloop.counter <= tip.confidence %}
+                        ★
+                    {% else %}
+                        <span style="color:#444;">☆</span>
+                    {% endif %}
+                {% endfor %}
+            </p>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+{% else %}
+<div class="text-center text-secondary mt-4">
+    <p>No tips available for today.</p>
+</div>
+{% endif %}
+
+{% endblock %}

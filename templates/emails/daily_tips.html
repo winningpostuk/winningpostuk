@@ -1,0 +1,98 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Today's Tips Are Ready</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body { margin:0; padding:0; background:#0b0b0b; font-family:Arial, sans-serif; color:#e5e7eb; }
+    table { border-collapse:collapse; }
+    .wrapper { width:100%; background:#0b0b0b; padding:32px 0; }
+    .container { max-width:640px; width:100%; margin:auto; background:#121212; border:1px solid #1f1f1f; border-radius:12px; overflow:hidden; }
+    .header { background:#0d0d0d; padding:24px; text-align:center; border-bottom:1px solid #1f1f1f; }
+    .content { padding:24px; }
+    .footer { padding:20px 24px; font-size:12px; text-align:center; color:#9ca3af; }
+
+    h1 { color:#fff; margin:20px 0 10px; font-size:22px; }
+    p { color:#cbd5e1; line-height:1.6; font-size:15px; }
+
+    .btn {
+      display:inline-block;
+      padding:12px 20px;
+      background:#2563eb;
+      color:#fff !important;
+      border-radius:8px;
+      font-size:16px;
+      font-weight:bold;
+      text-decoration:none;
+      margin-top:16px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrapper">
+  <table class="container">
+
+    <!-- HEADER -->
+<tr>
+  <td class="header">
+    {% if absolute_logo_url %}
+      <img src="{{ absolute_logo_url }}" alt="WinningPostUK" style="width:120px; height:auto; border-radius:6px;">
+    {% endif %}
+  </td>
+</tr>
+
+    <!-- CONTENT -->
+    <tr>
+      <td class="content">
+
+        <h1>Today’s Tips Are Ready</h1>
+
+        <p>
+          {% if user and user.first_name %}
+            Hi {{ user.first_name }},
+          {% else %}
+            Hi,
+          {% endif %}
+          your expert horse racing tips for today are now live on the website.
+        </p>
+
+        {% if view_url %}
+        <p>
+          <a href="{{ view_url }}" class="btn">View Today’s Tips</a>
+        </p>
+        {% endif %}
+
+        {% if login_url %}
+        <p style="margin-top:20px;">
+          <a href="{{ login_url }}" class="btn" style="background:#374151;">Log In</a>
+        </p>
+        {% endif %}
+
+      </td>
+    </tr>
+
+    <!-- FOOTER -->
+    <tr>
+      <td class="footer">
+
+        <p>You’re receiving this email because you have an active WinningPostUK subscription.</p>
+
+        {% if manage_url %}
+        <p style="margin-top:18px; font-size:13px;">
+            Manage your membership:
+            <a href="{{ manage_url }}" style="color:#93c5fd;">Click here</a>
+        </p>
+        {% endif %}
+
+      </td>
+    </tr>
+
+  </table>
+</div>
+</body>
+</html>
+

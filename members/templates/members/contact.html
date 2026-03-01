@@ -1,0 +1,43 @@
+
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 650px;">
+
+    <h2 class="premium-title mb-4">Contact Us</h2>
+
+    {% if success %}
+        <div class="alert alert-success">
+            Thank you! Your message has been sent. We will get back to you shortly.
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label text-light">Your Name</label>
+            {{ form.name|add_class:"form-control" }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label text-light">Email Address</label>
+            {{ form.email|add_class:"form-control" }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label text-light">Message</label>
+            {{ form.message|add_class:"form-control" }}
+        </div>
+
+        <div class="mb-3 p-3 rounded" style="background:#222; border:1px solid #555;">
+            <label class="form-label text-warning">Verification</label>
+            {{ form.captcha }}
+        </div>
+
+        <button type="submit" class="btn btn-warning mt-2">Send Message</button>
+    </form>
+
+</div>
+{% endblock %}

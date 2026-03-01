@@ -1,0 +1,19 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<h2>Choose Your Membership Plan</h2>
+<div class="list-group">
+    <a href="/checkout/?plan=bronze" class="membership-box bronze">
+        Bronze Membership - £15.00 (Monthly)
+    </a>
+    <a href="/checkout/?plan=silver" class="membership-box silver">
+        Silver Membership - £42.50 (Every 3 Months)
+    </a>
+    <a href="/checkout/?plan=gold" class="membership-box gold">
+        Gold Membership - £80.00 (Every 6 Months)
+    </a>
+    <a href="/checkout/?plan=platinum" class="membership-box platinum">
+        Platinum Membership - £150.00 (Annual)
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<h2>Subscribe to Winning Post UK</h2>
+<p>You selected: {{ plan|capfirst }} Membership (£{{ amount }})</p>
+
+<!-- PayPal SDK -->
+<script src="https://www.paypal.com/sdk/js?client-id=ATrjJsprSH8wj9rb6cjyePSCLOuYbAACGE0aMWn5-6j8o3BXCK-0kJgcyL5p9ejTU1huCujZyyePp_pU&vault=true&intent=subscription&currency=GBP"></script>
+
+<!-- Container for PayPal Buttons -->
+<div id="paypal-button-container"></div>
+
+<script>
+    paypal.Buttons({
+        style: {
+            layout: 'vertical',
+            color: 'gold',
+            shape: 'rect',
+            label: 'subscribe'
+        },
+        createSubscription: function(data, actions) {
+            return actions.subscription.create({
+                plan_id: '{{ plan_id }}' // Dynamic Plan ID from Django
+            });
+        },
+        onApprove: function(data, actions) {
+            alert('Subscription created successfully! ID: ' + data.subscriptionID);
+            window.location.href = '/success/';
+        },
+        onCancel: function(data) {
+            window.location.href = '/cancel/';
+        }
+    }).render('#paypal-button-container');
+</script>
+{% endblock %}

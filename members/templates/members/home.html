@@ -1,0 +1,66 @@
+
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="hero-section text-center text-light">
+    <h1 class="display-4 premium-title">Winning Post UK</h1>
+    <p class="lead">Exclusive Horse Racing Tips for Serious Punters</p>
+
+    {% if request.user.is_authenticated and request.user.membership.active %}
+        <a href="{% url 'tips:tips' %}" class="btn btn-primary">Today's Tips</a>
+    {% else %}
+        <a href="{% url 'register' %}" class="btn btn-primary">Join Now</a>
+    {% endif %}
+</div>
+
+
+<!-- PERFORMANCE SNAPSHOT SECTION -->
+<div class="container mt-5">
+    <div class="analytics-card text-center">
+        <h4 class="text-gold">Performance Snapshot</h4>
+
+        <p>
+            <strong>Strike Rate:</strong>
+            <span class="text-light">{{ strike_rate }}%</span>
+        </p>
+
+
+<p>
+    <strong>Total Profit:</strong>
+    <span class="text-light">£{{ total_profit }}</span>
+
+    <span 
+        title="Calculated using flat £1 stakes on every tip (win‑only unless Each Way)."
+        style="cursor: help; margin-left: 6px; color: #FFD700;"
+    >
+        ⓘ
+    </span>
+</p>
+
+    </div>
+</div>
+
+
+<!-- Features Section -->
+<div class="features-section text-center mt-5">
+    <h2 class="section-title">Why Choose Us?</h2>
+
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <h3 class="feature-title">Expert Analysis</h3>
+            <p>Our tips are backed by years of racing experience and data-driven insights.</p>
+        </div>
+
+        <div class="col-md-4">
+            <h3 class="feature-title">Premium Membership</h3>
+            <p>Choose from Bronze, Silver, Gold, or Platinum plans tailored for you.</p>
+        </div>
+
+        <div class="col-md-4">
+            <h3 class="feature-title">Winning Edge</h3>
+            <p>Maximise your chances with our proven strategies and exclusive tips.</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
