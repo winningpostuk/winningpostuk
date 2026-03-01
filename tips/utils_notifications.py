@@ -1,29 +1,27 @@
 
+# tips/utils_notifications.py
 from __future__ import annotations
 
-from typing import Optional, Dict, Any, List
+from typing import Iterable, List, Dict, Optional
+import time
+import logging
+from smtplib import SMTPServerDisconnected, SMTPException
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
-from django.db.models import Q
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.template.loader import render_to_string
 from django.templatetags.static import static
 from django.utils.timezone import localdate
+from django.db.models import Q
 
 from members.models import Membership
 
+logger = logging.getLogger(__name__)
 
-# -----------------------------
-# Internal helpers
-# -----------------------------
 
 def _absolute_logo_url(request=None) -> Optional[str]:
     """
-    Build an absolute URL for the header logo so email clients can load it.
-    Priority:
-      1) request.build_absolute_uri(static('images/logo.png')) if request provided
-      2) settings.SITE_BASE_URL + static('images/logo.png') if SITE_BASE_URL set
-      3) None (template will hide the logo gracefully)
+    Build an absolute URL to the logo for email clients.
     """
     logo_path = static("images/logo.png")
     if request is not None:
@@ -37,179 +35,209 @@ def _absolute_logo_url(request=None) -> Optional[str]:
     return None
 
 
-def _view_today_url() -> Optional[str]:
+def _render_notification_html(
+    view_url: Optional[str],
+    login_url: Optional[str],
+    manage_url: Optional[str],
+    request=None
+) -> str:
     """
-    Returns an absolute URL to the 'Today’s Tips' page suitable for emails.
+    Render the minimal 'tips are ready' email once (no per-user content).
     """
-    # Prefer explicit absolute; fall back if provided
-    return getattr(settings, "TIPS_TODAY_URL", None)
-
-
-def _login_url_absolute() -> Optional[str]:
-    """
-    Returns an absolute URL to the login page for emails.
-    """
-    # Do not use settings.LOGIN_URL here (that is a path for Django site redirects).
-    return getattr(settings, "LOGIN_URL_ABSOLUTE", None)
-
-
-def _account_manage_url() -> Optional[str]:
-    """
-    Returns an absolute URL to the user's membership/manage page for emails.
-    """
-    return getattr(settings, "ACCOUNT_MANAGE_URL", None)
-
-
-def _render_notification_html(user=None, request=None) -> str:
-    """
-    Render the HTML email (no tip details).
-    Expects template at templates/emails/daily_tips.html
-    """
-    context: Dict[str, Any] = {
-        "user": user,
+    context = {
+        "user": None,  # no personalization to keep memory and time low
         "today": localdate(),
-        "view_url": _view_today_url(),
-        "login_url": _login_url_absolute(),
-        "manage_url": _account_manage_url(),
+        "view_url": view_url,
+        "login_url": login_url,
+        "manage_url": manage_url,
         "absolute_logo_url": _absolute_logo_url(request),
     }
     return render_to_string("emails/daily_tips.html", context)
 
 
-def _render_notification_text(user=None) -> str:
+def _render_notification_text(
+    view_url: Optional[str],
+    login_url: Optional[str],
+    manage_url: Optional[str]
+) -> str:
     """
-    Plain-text fallback. No tip details.
+    Plain-text fallback for clients that do not render HTML.
     """
-    name = getattr(user, "first_name", "") if user else ""
-    greeting = f"Hi {name},".strip() if name else "Hi,"
-
-    lines: List[str] = [
-        greeting,
+    lines = [
+        "Hi,",
         "",
         "Your expert horse racing tips for today are now available on the website.",
         "",
     ]
-
-    today_url = _view_today_url()
-    if today_url:
-        lines.append(f"View Today’s Tips: {today_url}")
-
-    login_abs = _login_url_absolute()
-    if login_abs:
-        lines.append(f"Log In: {login_abs}")
-
-    lines.extend(
-        [
-            "",
-            "You're receiving this email because you have an active WinningPostUK subscription.",
-        ]
-    )
-
+    if view_url:
+        lines.append(f"View Today’s Tips: {view_url}")
+    if login_url:
+        lines.append(f"Log In: {login_url}")
+    if manage_url:
+        lines.append(f"Manage membership: {manage_url}")
+    lines.append("")
+    lines.append("You’re receiving this email because you have an active subscription.")
     return "\n".join(lines)
 
 
-def _active_memberships_with_emails():
+def _active_member_emails_iter() -> Iterable[str]:
     """
-    Returns a queryset of active memberships whose related user has a deliverable email.
-
-    Mirrors your previous logic: Membership.active == True
+    Stream active subscriber emails with minimal memory.
+    - Uses iterator() so we don't load the entire queryset into RAM.
+    - Filters out null/empty emails.
+    - If you need stricter 'paid' logic, adjust the filters here.
     """
-    return (
+    qs = (
         Membership.objects.filter(active=True)
         .select_related("user")
         .filter(~Q(user__email__isnull=True) & ~Q(user__email=""))
+        .values_list("user__email", flat=True)
+        .iterator(chunk_size=1000)
     )
+    for email in qs:
+        yield email
 
 
-# -----------------------------
-# Public API
-# -----------------------------
-
-def send_daily_tip_notification_to_user(user, request=None, fail_silently: bool = False) -> None:
+def _chunked(iterable: Iterable[str], size: int) -> Iterable[List[str]]:
     """
-    Sends a single subscriber the notification that today's tips are ready.
-    Does NOT include tip content.
+    Yield lists from iterable in chunks of `size`.
     """
-    email = getattr(user, "email", None)
-    if not email:
-        return
-
-    subject = "Today's Tips Are Ready"
-    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "support@winningpostuk.com")
-    text = _render_notification_text(user=user)
-    html = _render_notification_html(user=user, request=request)
-
-    msg = EmailMultiAlternatives(
-        subject=subject,
-        body=text,
-        from_email=from_email,
-        to=[email],
-    )
-    msg.attach_alternative(html, "text/html")
-    msg.send(fail_silently=fail_silently)
+    batch: List[str] = []
+    for item in iterable:
+        if item:
+            batch.append(item)
+        if len(batch) >= size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
 
 def send_daily_tip_notifications(
-    batch_size: int = 200,
+    *,
+    batch_size: int = 50,
+    sleep_between_batches: float = 1.5,
+    max_recipients: Optional[int] = None,
     request=None,
-    personalized: bool = False,
-    fail_silently: bool = False,
 ) -> Dict[str, int]:
     """
-    Send “tips are ready” notifications to all active subscribers (Membership.active == True).
+    Render-safe batched notification sender that avoids timeouts and OOM.
 
-    Modes:
-      - personalized=True: send one email per user (personal greeting; slower)
-      - personalized=False (default): single render + BCC batches (faster & private)
+    - Renders HTML once (no per-user personalization).
+    - Batches recipients (BCC) to reduce SMTP calls and memory.
+    - Reuses SMTP connection and retries once on disconnect.
+    - Returns summary dict for admin messages.
+
+    Args:
+        batch_size: number of recipients per email (BCC). Keep <= 50 for Gmail.
+        sleep_between_batches: seconds to sleep between SMTP sends (throttle).
+        max_recipients: if set, stops after sending to this many recipients (safety).
+        request: optional HttpRequest for absolute logo URL.
 
     Returns:
-      {"recipients": int, "batches": int}
+        {"recipients": int, "batches": int, "skipped": int}
     """
-    subs = _active_memberships_with_emails()
-    if not subs.exists():
-        return {"recipients": 0, "batches": 0}
-
-    # Build unique user list & email list
-    recipients: List[str] = []
-    users: List[Any] = []
-    for m in subs:
-        u = m.user
-        email = getattr(u, "email", "")
-        if email and email not in recipients:
-            recipients.append(email)
-            users.append(u)
-
-    if not recipients:
-        return {"recipients": 0, "batches": 0}
-
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)
     subject = "Today's Tips Are Ready"
-    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "support@winningpostuk.com")
 
-    if personalized:
-        sent = 0
-        for u in users:
-            send_daily_tip_notification_to_user(u, request=request, fail_silently=fail_silently)
-            sent += 1
-        return {"recipients": sent, "batches": sent}
+    view_url = getattr(settings, "TIPS_TODAY_URL", None)
+    login_url = getattr(settings, "LOGIN_URL_ABSOLUTE", None)
+    manage_url = getattr(settings, "ACCOUNT_MANAGE_URL", None)
 
-    # Fast BCC-based approach
-    text = _render_notification_text(user=None)
-    html = _render_notification_html(user=None, request=request)
+    # Render templates once
+    html = _render_notification_html(view_url, login_url, manage_url, request=request)
+    text = _render_notification_text(view_url, login_url, manage_url)
 
-    batches = 0
-    for i in range(0, len(recipients), batch_size):
-        chunk = recipients[i : i + batch_size]
-        if not chunk:
-            continue
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text,
-            from_email=from_email,
-            to=[from_email],     # visible "To" (sender), recipients in BCC for privacy
-            bcc=chunk,
+    recipients_sent = 0
+    batches_sent = 0
+    skipped = 0
+
+    # Build a generator of emails; we may limit them by max_recipients
+    email_iter = _active_member_emails_iter()
+
+    if max_recipients is not None and max_recipients > 0:
+        def limited_iter():
+            nonlocal recipients_sent, skipped
+            count = 0
+            for e in email_iter:
+                if count >= max_recipients:
+                    skipped += 1
+                    continue
+                count += 1
+                yield e
+        email_iter = limited_iter()
+
+    # Reuse a single SMTP connection for throughput and to avoid connect storms
+    connection = None
+    try:
+        connection = get_connection(
+            fail_silently=False,
+            username=getattr(settings, "EMAIL_HOST_USER", None),
+            password=getattr(settings, "EMAIL_HOST_PASSWORD", None),
+            timeout=getattr(settings, "EMAIL_TIMEOUT", 15),  # add in settings if not present
         )
-        msg.attach_alternative(html, "text/html")
-        msg.send(fail_silently=fail_silently)
-        batches += 1
+        connection.open()
 
-    return {"recipients": len(recipients), "batches": batches}
+        for batch in _chunked(email_iter, batch_size):
+            if not batch:
+                continue
+
+            try:
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text,
+                    from_email=from_email,
+                    to=[from_email],       # visible TO
+                    bcc=batch,             # recipients in BCC for privacy
+                    connection=connection,
+                )
+                msg.attach_alternative(html, "text/html")
+                msg.send()
+
+            except SMTPServerDisconnected:
+                # Retry once by reopening connection
+                logger.warning("SMTP disconnected during batch; retrying once…")
+                try:
+                    connection.close()
+                except Exception:
+                    pass
+                connection = get_connection(
+                    fail_silently=False,
+                    username=getattr(settings, "EMAIL_HOST_USER", None),
+                    password=getattr(settings, "EMAIL_HOST_PASSWORD", None),
+                    timeout=getattr(settings, "EMAIL_TIMEOUT", 15),
+                )
+                connection.open()
+                # Try send again once
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text,
+                    from_email=from_email,
+                    to=[from_email],
+                    bcc=batch,
+                    connection=connection,
+                )
+                msg.attach_alternative(html, "text/html")
+                msg.send()
+
+            except SMTPException as e:
+                logger.error("SMTP error while sending batch: %s", e, exc_info=True)
+                # Continue with next batch rather than fail the whole action
+                continue
+
+            recipients_sent += len(batch)
+            batches_sent += 1
+
+            # Throttle to reduce provider suspicion / rate limits
+            if sleep_between_batches and sleep_between_batches > 0:
+                time.sleep(sleep_between_batches)
+
+    finally:
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception:
+                pass
+
+    return {"recipients": recipients_sent, "batches": batches_sent, "skipped": skipped}
+
