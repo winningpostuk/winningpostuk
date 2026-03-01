@@ -442,5 +442,16 @@ div.text-center a.filter-link:visited {
     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
 
+/* Remove shadow on membership text to prevent blur */
+.membership-box,
+.membership-box * {
+    text-shadow: none !important;
+}
+
+
+.membership-box {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
 
 
